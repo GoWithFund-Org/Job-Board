@@ -2,6 +2,9 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export function middleware(req: NextRequest) {
+  // Debug: Log all cookies
+  console.log("Cookies in middleware:", req.cookies.getAll());
+
   // Supabase session cookies start with "sb-"
   const hasSupabaseSession = req.cookies.getAll().some((cookie) =>
     cookie.name.startsWith("sb-")
