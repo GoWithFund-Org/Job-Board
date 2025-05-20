@@ -1,45 +1,70 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { NextResponse } from "next/server"
+import { createServerClient } from "@supabase/ssr"
 
-export async function GET(request: NextRequest) {
-  const requestUrl = new URL(request.url)
-  console.log("Auth callback triggered, URL:", requestUrl.toString())
-  
-  // Extract code and any other parameters
-  const code = requestUrl.searchParams.get("code")
-  const type = requestUrl.searchParams.get("type")
-  
-  console.log("Auth parameters:", { code: !!code, type })
+export async function GET(request: Request) {
+  const url = new URL(request.url)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-  if (code) {
-    try {
-      console.log("Attempting to exchange code for session...")
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-      
-      console.log("Auth exchange result:", { 
-        sessionExists: !!data.session,
-        userId: data.session?.user?.id,
-        error: error?.message,
-        errorDetails: error
+  // Get the redirect URL from params or default to dashboard
+  const redirectPath = url.searchParams.get('redirect_') || '/dashboard'
+  const response = NextResponse.redirect(new URL(redirectPath, url.origin))
+
+  // Configure cookies with proper domain settings
+  const cookies = {
+    getAll: () => [],
+    setAll: (cookies: { name: string; value: string; options?: Record<string, any> }[]) => {
+      cookies.forEach(({ name, value, options }) => {
+        response.cookies.set({
+          name,
+          value,
+          ...options,
+          domain: '.gowithfund.com',
+          secure: true,
+          sameSite: 'lax'
+        })
       })
-      
-      // If we have a session after exchanging the code, redirect to dashboard
-      if (data.session) {
-        const dashboardUrl = `${requestUrl.origin}/dashboard`
-        console.log("Redirecting to dashboard:", dashboardUrl)
-        return NextResponse.redirect(dashboardUrl)
-      } else {
-        console.error("No session available after code exchange")
-      }
-    } catch (err) {
-      console.error("Error in auth callback:", err)
     }
-  } else {
-    console.warn("No code parameter found in auth callback URL")
   }
 
-  // Fallback redirect to homepage
-  console.log("Fallback: redirecting to homepage")
-  // Fallback - redirect to homepage if no session
-  return NextResponse.redirect(requestUrl.origin)
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, { cookies })
+
+  const code = url.searchParams.get("code")
+  if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    console.log('exchangeCodeForSession result:', { data, error })
+  }
+
+  return response
+}import { NextResponse } from "next/server"
+import { createServerClient } from "@supabase/ssr"
+
+export async function GET(request: Request) {
+  const url = new URL(request.url)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+  // Prepare the response (redirect to dashboard by default)
+  const response = NextResponse.redirect(url.origin + "/dashboard")
+
+  // Implement the cookies interface for @supabase/ssr
+  const cookies = {
+    getAll: () => [], // No cookies to read on callback
+    setAll: (cookies: { name: string; value: string; options?: Record<string, any> }[]) => {
+      cookies.forEach(({ name, value }) => {
+        response.cookies.set(name, value)
+      })
+    }
+  }
+
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, { cookies })
+
+  // Exchange the code for a session
+  const code = url.searchParams.get("code")
+  if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    console.log('exchangeCodeForSession result:', { data, error })
+  }
+
+  return response
 }

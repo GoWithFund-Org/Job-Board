@@ -41,17 +41,29 @@ export default function LoginPage() {
 
       console.log("Login successful, session created:", !!data.session)
 
-      // Check for redirect parameter
-      const params = new URLSearchParams(window.location.search)
-      const redirectPath = params.get("redirect_")
-      
-      // Redirect to the requested page or dashboard
-      if (redirectPath) {
-        console.log("Redirecting to:", redirectPath)
-        router.push(redirectPath)
-      } else {
-        console.log("Redirecting to dashboard (default)")
-        router.push("/dashboard")
+      if (data?.session) {
+        await fetch('/api/auth/set-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          }),
+        })
+
+        // Check for redirect parameter
+        const params = new URLSearchParams(window.location.search)
+        const redirectPath = params.get("redirect_")
+
+        // Redirect to the requested page or dashboard
+        if (redirectPath) {
+          console.log("Redirecting to:", redirectPath)
+          router.push(redirectPath)
+        } else {
+          console.log("Redirecting to dashboard (default)")
+          router.push("/dashboard")
+        }
+        return; // Prevent further code execution
       }
     } catch (err) {
       setError("An unexpected error occurred")

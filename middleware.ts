@@ -1,24 +1,46 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 
-export function middleware(req: NextRequest) {
-  // Debug: Log all cookies
-  console.log("Cookies in middleware:", req.cookies.getAll());
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next()
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-  // Supabase session cookies start with "sb-"
-  const hasSupabaseSession = req.cookies.getAll().some((cookie) =>
-    cookie.name.startsWith("sb-")
-  );
-
-  if (!hasSupabaseSession && req.nextUrl.pathname.startsWith("/dashboard")) {
-    const redirectUrl = new URL("/login", req.url);
-    redirectUrl.searchParams.set("redirect_", req.nextUrl.pathname);
-    return NextResponse.redirect(redirectUrl);
+  // Configure cookies with proper domain settings
+  const cookies = {
+    getAll: () => {
+      return req.cookies.getAll().map(({ name, value }) => ({ name, value }))
+    },
+    setAll: (cookies: { name: string; value: string; options?: Record<string, any> }[]) => {
+      cookies.forEach(({ name, value, options }) => {
+        res.cookies.set({
+          name,
+          value,
+          ...options,
+          domain: '.gowithfund.com',
+          secure: true,
+          sameSite: 'lax',
+          path: '/'
+        })
+      })
+    }
   }
 
-  return NextResponse.next();
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, { cookies })
+  const { data: { session } } = await supabase.auth.getSession()
+
+  if (!session && req.nextUrl.pathname.startsWith('/dashboard')) {
+    const redirectUrl = new URL('/login', req.url)
+    redirectUrl.searchParams.set('redirect_', req.nextUrl.pathname)
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  return res
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"], // Only apply middleware to dashboard routes
+  matcher: ['/dashboard/:path*'],
 }
+
+export { createServerClient }

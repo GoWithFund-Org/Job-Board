@@ -1,4 +1,6 @@
-import { createClient } from "@supabase/supabase-js"
+// Client-side Supabase client (for use in React components, hooks, etc.)
+import { createClient as createBrowserClient } from '@supabase/supabase-js'
+import { createClient as createServerClient } from '@supabase/ssr'
 
 // Use environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -13,5 +15,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-// Create a single instance of the Supabase client
-export const supabase = createClient(supabaseUrl!, supabaseAnonKey!)
+// Export the browser client for client-side usage
+export const supabase = createBrowserClient(supabaseUrl!, supabaseAnonKey!)
+
+// Export the server-side client for use in middleware, API routes, server components
+export { createServerClient }
