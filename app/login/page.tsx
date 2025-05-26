@@ -42,15 +42,6 @@ export default function LoginPage() {
       console.log("Login successful, session created:", !!data.session)
 
       if (data?.session) {
-        await fetch('/api/auth/set-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
-          }),
-        })
-
         // Check for redirect parameter
         const params = new URLSearchParams(window.location.search)
         const redirectPath = params.get("redirect_")
