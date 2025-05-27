@@ -9,30 +9,28 @@ export async function middleware(req: NextRequest) {
   let supabaseUrl: string | undefined;
   let supabaseAnonKey: string | undefined;
   const nodeEnv = process.env.NODE_ENV;
-  const vercelEnv = process.env.VERCEL_ENV; // Vercel specific
+  const vercelEnv = process.env.VERCEL_ENV;
 
-  console.log("NODE_ENV:", nodeEnv);
-  console.log("VERCEL_ENV:", vercelEnv);
+  console.log(`middleware.ts: NODE_ENV: ${nodeEnv}, VERCEL_ENV: ${vercelEnv}`);
 
-  if (nodeEnv === 'production' || vercelEnv === 'production') {
-    console.log("Using Production Supabase variables");
+  if (vercelEnv === 'production') {
+    console.log("middleware.ts: Using Production Supabase variables (VERCEL_ENV=production)");
     supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_PROD_URL;
     supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PROD_ANON_KEY;
   } else {
-    console.log("Using Preview/Development Supabase variables");
+    // This will cover VERCEL_ENV === 'preview', VERCEL_ENV === 'development',
+    // and local development (where VERCEL_ENV is undefined and NODE_ENV is typically 'development')
+    console.log(`middleware.ts: Using Preview/Development Supabase variables (VERCEL_ENV: ${vercelEnv}, NODE_ENV: ${nodeEnv})`);
     supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_PREVIEW_URL;
     supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PREVIEW_ANON_KEY;
   }
 
-  console.log("Selected Supabase URL:", supabaseUrl ? supabaseUrl.substring(0, 20) + "..." : "undefined");
-
-  // Ensure these are defined before creating client, or handle error
+  console.log("middleware.ts: Selected Supabase URL (first 20 chars):", supabaseUrl ? supabaseUrl.substring(0, 20) + "..." : "undefined");
+  // Keep the existing check:
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error("Supabase URL or Anon Key is undefined after environment check. Halting middleware.");
-    // Decide on response: NextResponse.next() or a custom error response
-    // For now, let's allow it to proceed to see if createServerClient catches it,
-    // but ideally, you'd return an error response here.
-    // return new NextResponse("Configuration error: Supabase credentials missing", { status: 500 });
+    console.error(
+      "middleware.ts: Supabase URL or Anon Key is undefined after environment check. Ensure PROD or PREVIEW variables are set for the current environment."
+    );
   }
 
   // Configure cookies with proper domain settings
